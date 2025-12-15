@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api } from '@/lib/api';
-import { getCurrentUserId } from '@/lib/auth';
+import { api } from '../../../lib/api';
+import { getCurrentUserId } from '../../../lib/auth';
 
 interface AppraisalRecord {
   _id: string;
