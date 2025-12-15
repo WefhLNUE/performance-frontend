@@ -1,0 +1,151 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { api } from '@/lib/api';
+
+interface Dispute {
+  _id: string;
+  appraisalRecordId: {
+    assignmentId: {
+      employeeProfileId: {
+        firstName: string;
+        lastName: string;
+      };
+    };
+  };
+  reason: string;
+  status: string;
+  createdAt: string;
+}
+
+export default function DisputesPage() {
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  useEffect(() => {
+    loadDisputes();
+  }, []);
+
+  const loadDisputes = async () => {
+    try {
+      setLoading(true);
+      const data = await api.get<Dispute[]>('/performance/disputes');
+      setDisputes(data || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load disputes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredDisputes = statusFilter
+    ? disputes.filter((d) => d.status === statusFilter)
+    : disputes;
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
+        <div style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <h1
+          style={{
+            fontSize: '2rem',
+            fontWeight: 600,
+            color: 'var(--performance)',
+            marginBottom: '0.5rem',
+          }}
+        >
+          Disputes Management
+        </h1>
+        <p style={{ color: 'var(--text-secondary)' }}>
+          Review and resolve employee disputes regarding appraisals
+        </p>
+      </div>
+
+      {error && (
+        <div className="alert alert-error" style={{ marginBottom: '1.5rem' }}>
+          {error}
+        </div>
+      )}
+
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <label className="form-label">Filter by Status</label>
+        <select
+          className="form-input"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="">All Statuses</option>
+          <option value="PENDING">Pending</option>
+          <option value="APPROVED">Approved</option>
+          <option value="REJECTED">Rejected</option>
+        </select>
+      </div>
+
+      {filteredDisputes.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <p style={{ color: 'var(--text-secondary)' }}>
+            No disputes found.
+          </p>
+        </div>
+      ) : (
+        <div className="card">
+          <table className="table" style={{ width: '100%' }}>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDisputes.map((dispute) => (
+                <tr key={dispute._id}>
+                  <td>
+                    {dispute.appraisalRecordId.assignmentId.employeeProfileId.firstName}{' '}
+                    {dispute.appraisalRecordId.assignmentId.employeeProfileId.lastName}
+                  </td>
+                  <td>{dispute.reason.substring(0, 60)}...</td>
+                  <td>
+                    <span className={`badge ${
+                      dispute.status === 'APPROVED' ? 'badge-success' :
+                      dispute.status === 'REJECTED' ? 'badge-error' :
+                      'badge-warning'
+                    }`}>
+                      {dispute.status}
+                    </span>
+                  </td>
+                  <td>{new Date(dispute.createdAt).toLocaleDateString()}</td>
+                  <td>
+                    <Link
+                      href={`/performance/disputes/${dispute._id}`}
+                      style={{
+                        color: 'var(--primary-600)',
+                        textDecoration: 'none',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      View/Resolve
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
