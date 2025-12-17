@@ -51,16 +51,37 @@ export default function EvaluationFormPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [assignmentData, recordData] = await Promise.all([
-        api.get<Assignment>(`/performance/assignments/${assignmentId}`),
-        api.get<AppraisalRecord>(`/performance/assignments/${assignmentId}/record`).catch(() => null),
-      ]);
 
+      // Backend endpoint returns { assignment, template, existingRecord }
+      const data = await api.get<{
+        assignment: Assignment;
+        template: Assignment['templateId'];
+        existingRecord?: any;
+      }>(`/performance/assignments/${assignmentId}/form`);
+
+      const assignmentData = data.assignment;
       setAssignment(assignmentData);
-      
-      if (recordData) {
-        setRecord(recordData);
-        setFormData(recordData);
+
+      // If there is an existing record, map it into our frontend shape
+      if (data.existingRecord) {
+        const existing = data.existingRecord;
+        const mappedRecord: AppraisalRecord = {
+          _id: existing._id,
+          ratings: (existing.ratings || []).map((r: any) => ({
+            criterionKey: r.criterionKey,
+            score: r.score,
+            comments: r.comment || '',
+          })),
+          managerSummary: existing.managerSummary || existing.overallComment || '',
+          strengths: existing.strengths ? String(existing.strengths).split('\n') : [],
+          improvementAreas: existing.improvementAreas
+            ? String(existing.improvementAreas).split('\n')
+            : [],
+          status: existing.status,
+        };
+
+        setRecord(mappedRecord);
+        setFormData(mappedRecord);
       } else {
         // Initialize ratings from template criteria
         const initialRatings = assignmentData.templateId.criteria.map((criterion) => ({
@@ -68,7 +89,12 @@ export default function EvaluationFormPage() {
           score: 0,
           comments: '',
         }));
-        setFormData({ ...formData, ratings: initialRatings });
+        setFormData({
+          ratings: initialRatings,
+          managerSummary: '',
+          strengths: [],
+          improvementAreas: [],
+        });
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load evaluation');
@@ -87,11 +113,20 @@ export default function EvaluationFormPage() {
     setError('');
     setSaving(true);
     try {
-      if (record?._id) {
-        await api.put(`/performance/records/${record._id}`, formData);
-      } else {
-        await api.post(`/performance/assignments/${assignmentId}/record`, formData);
-      }
+      // Map frontend form data to backend DTO shape
+      const payload = {
+        ratings: formData.ratings.map((r) => ({
+          criterionKey: r.criterionKey,
+          score: r.score,
+          comment: r.comments || '',
+        })),
+        managerSummary: formData.managerSummary || '',
+        strengths: (formData.strengths || []).join('\n'),
+        improvementAreas: (formData.improvementAreas || []).join('\n'),
+      };
+
+      // Backend uses /assignments/:assignmentId/records for both create and update
+      await api.post(`/performance/assignments/${assignmentId}/records`, payload);
       setSuccess('Draft saved successfully');
     } catch (err: any) {
       setError(err.message || 'Failed to save draft');
@@ -109,12 +144,22 @@ export default function EvaluationFormPage() {
     setSaving(true);
     try {
       if (record?._id) {
+        // Existing record: just submit it
         await api.post(`/performance/records/${record._id}/submit`);
       } else {
-        await api.post(`/performance/assignments/${assignmentId}/record`, {
-          ...formData,
+        // No record yet: create a submitted record in one step
+        const payload = {
+          ratings: formData.ratings.map((r) => ({
+            criterionKey: r.criterionKey,
+            score: r.score,
+            comment: r.comments || '',
+          })),
+          managerSummary: formData.managerSummary || '',
+          strengths: (formData.strengths || []).join('\n'),
+          improvementAreas: (formData.improvementAreas || []).join('\n'),
           status: 'MANAGER_SUBMITTED',
-        });
+        };
+        await api.post(`/performance/assignments/${assignmentId}/records`, payload);
       }
       setSuccess('Evaluation submitted successfully');
       setTimeout(() => router.push('/performance/evaluations'), 2000);
@@ -144,10 +189,10 @@ export default function EvaluationFormPage() {
             marginBottom: '0.5rem',
           }}
         >
-          Evaluation: {assignment.employeeProfileId.firstName} {assignment.employeeProfileId.lastName}
+          Evaluation: {assignment.employeeProfileId?.firstName || ''} {assignment.employeeProfileId?.lastName || 'Unknown'}
         </h1>
         <p style={{ color: 'var(--text-secondary)' }}>
-          Cycle: {assignment.cycleId.name} | Template: {assignment.templateId.name}
+          Cycle: {assignment.cycleId?.name || 'N/A'} | Template: {assignment.templateId?.name || 'N/A'}
         </p>
       </div>
 
@@ -168,7 +213,14 @@ export default function EvaluationFormPage() {
           Performance Ratings
         </h2>
 
-        {assignment.templateId.criteria.map((criterion, index) => {
+        {!assignment.templateId?.criteria || assignment.templateId.criteria.length === 0 ? (
+          <div className="alert alert-warning" style={{ marginBottom: '1rem' }}>
+            No evaluation criteria found. This assignment may not have a template linked properly.
+            Please contact HR to fix this assignment.
+          </div>
+        ) : null}
+
+        {(assignment.templateId?.criteria || []).map((criterion, index) => {
           const rating = formData.ratings.find((r) => r.criterionKey === criterion.key) || {
             criterionKey: criterion.key,
             score: 0,
@@ -180,7 +232,7 @@ export default function EvaluationFormPage() {
             <div key={criterion.key} style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--border-light)' }}>
               <div style={{ marginBottom: '0.5rem' }}>
                 <label className="form-label">
-                  {criterion.title} (Max: {criterion.maxScore || assignment.templateId.ratingScale.max})
+                  {criterion.title} (Max: {criterion.maxScore || assignment.templateId?.ratingScale?.max || 5})
                 </label>
               </div>
               <div className="form-group">

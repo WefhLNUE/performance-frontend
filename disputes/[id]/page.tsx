@@ -6,16 +6,26 @@ import { api } from '@/lib/api';
 
 interface Dispute {
   _id: string;
-  appraisalRecordId: {
+  appraisalId?: {
     _id: string;
-    totalScore: number;
-    overallRatingLabel: string;
-    assignmentId: {
-      employeeProfileId: {
-        firstName: string;
-        lastName: string;
-      };
+    totalScore?: number;
+    overallRatingLabel?: string;
+    employeeProfileId?: {
+      firstName: string;
+      lastName: string;
     };
+  };
+  assignmentId?: {
+    _id: string;
+    employeeProfileId?: {
+      firstName: string;
+      lastName: string;
+    };
+  };
+  raisedByEmployeeId?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
   };
   reason: string;
   details?: string;
@@ -71,15 +81,19 @@ export default function DisputeDetailPage() {
     setResolving(true);
 
     try {
-      const payload: any = {
-        status: resolution.action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+      const dto: any = {
         resolutionSummary: resolution.resolutionSummary,
       };
 
       if (resolution.action === 'APPROVE' && resolution.adjustedScore) {
-        payload.adjustedScore = parseFloat(resolution.adjustedScore);
-        payload.adjustedRatingLabel = resolution.adjustedRatingLabel;
+        dto.adjustedScore = parseFloat(resolution.adjustedScore);
+        dto.adjustedRatingLabel = resolution.adjustedRatingLabel;
       }
+
+      const payload = {
+        dto,
+        action: resolution.action === 'APPROVE' ? 'approve' : 'reject',
+      };
 
       await api.post(`/performance/disputes/${disputeId}/resolve`, payload);
       router.push('/performance/disputes');
@@ -112,8 +126,15 @@ export default function DisputeDetailPage() {
           Dispute Resolution
         </h1>
         <p style={{ color: 'var(--text-secondary)' }}>
-          Employee: {dispute.appraisalRecordId.assignmentId.employeeProfileId.firstName}{' '}
-          {dispute.appraisalRecordId.assignmentId.employeeProfileId.lastName}
+          Employee: {
+            dispute.raisedByEmployeeId 
+              ? `${dispute.raisedByEmployeeId.firstName} ${dispute.raisedByEmployeeId.lastName}`
+              : dispute.assignmentId?.employeeProfileId
+                ? `${dispute.assignmentId.employeeProfileId.firstName} ${dispute.assignmentId.employeeProfileId.lastName}`
+                : dispute.appraisalId?.employeeProfileId
+                  ? `${dispute.appraisalId.employeeProfileId.firstName} ${dispute.appraisalId.employeeProfileId.lastName}`
+                  : 'Unknown'
+          }
         </p>
       </div>
 
@@ -123,27 +144,29 @@ export default function DisputeDetailPage() {
         </div>
       )}
 
-      <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>Current Appraisal</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-          <div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-              Current Score
-            </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--performance)' }}>
-              {dispute.appraisalRecordId.totalScore.toFixed(1)}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-              Current Rating
+      {dispute.appraisalId && (
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>Current Appraisal</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                Current Score
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--performance)' }}>
+                {dispute.appraisalId.totalScore?.toFixed(1) || 'N/A'}
+              </div>
             </div>
             <div>
-              <span className="badge badge-info">{dispute.appraisalRecordId.overallRatingLabel}</span>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                Current Rating
+              </div>
+              <div>
+                <span className="badge badge-info">{dispute.appraisalId.overallRatingLabel || 'N/A'}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="card" style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>Dispute Details</h2>
@@ -172,7 +195,7 @@ export default function DisputeDetailPage() {
         </div>
       </div>
 
-      {dispute.status === 'PENDING' && (
+      {(dispute.status === 'PENDING' || dispute.status === 'OPEN') && (
         <div className="card">
           <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>Resolution</h2>
           
@@ -244,7 +267,7 @@ export default function DisputeDetailPage() {
         </div>
       )}
 
-      {dispute.status !== 'PENDING' && dispute.resolutionSummary && (
+      {dispute.status !== 'PENDING' && dispute.status !== 'OPEN' && dispute.resolutionSummary && (
         <div className="card">
           <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>Resolution</h2>
           <p style={{ color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>

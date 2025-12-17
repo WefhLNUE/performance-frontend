@@ -51,14 +51,18 @@ export default function PublishAppraisalsPage() {
                 if (record && (record as any).latestAppraisalId) {
                   const appraisalRecord = await api.get<AppraisalRecord>(`/performance/records/${(record as any).latestAppraisalId}`).catch(() => null);
                   if (appraisalRecord && appraisalRecord.status === 'MANAGER_SUBMITTED') {
-                    allRecords.push({
-                      ...appraisalRecord,
-                      assignmentId: {
-                        _id: assignment._id,
-                        employeeProfileId: assignment.employeeProfileId,
-                        cycleId: assignment.cycleId,
-                      },
-                    });
+                  allRecords.push({
+                    ...appraisalRecord,
+                    assignmentId: {
+                      _id: assignment._id,
+                      employeeProfileId: assignment.employeeProfileId,
+                      // Ensure cycle has a readable name even if backend didn't populate it
+                      cycleId:
+                        assignment.cycleId && typeof assignment.cycleId === 'object'
+                          ? assignment.cycleId
+                          : { _id: cycle._id, name: cycle.name },
+                    },
+                  });
                   }
                 }
               } catch {

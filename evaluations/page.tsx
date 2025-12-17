@@ -40,7 +40,14 @@ export default function EvaluationsPage() {
       const data = await api.get<Assignment[]>(`/performance/assignments/manager/${userId}`);
       setAssignments(data || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load evaluations');
+      const msg = err?.message || '';
+      if (msg.includes('403')) {
+        setError('You are not authorized to perform evaluations. HR can assign you as a manager.');
+      } else if (msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('manager')) {
+        setError('No evaluation assignments found for your account yet.');
+      } else {
+        setError(msg || 'Failed to load evaluations');
+      }
     } finally {
       setLoading(false);
     }
@@ -100,10 +107,10 @@ export default function EvaluationsPage() {
               {assignments.map((assignment) => (
                 <tr key={assignment._id}>
                   <td>
-                    {assignment.employeeProfileId.firstName} {assignment.employeeProfileId.lastName}
+                    {assignment.employeeProfileId?.firstName || ''} {assignment.employeeProfileId?.lastName || 'Unknown'}
                   </td>
-                  <td>{assignment.cycleId.name}</td>
-                  <td>{assignment.templateId.name}</td>
+                  <td>{assignment.cycleId?.name || 'N/A'}</td>
+                  <td>{assignment.templateId?.name || 'N/A'}</td>
                   <td>
                     <span className={`badge ${
                       assignment.status === 'SUBMITTED' ? 'badge-success' :

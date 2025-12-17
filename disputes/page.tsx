@@ -6,17 +6,29 @@ import { api } from '@/lib/api';
 
 interface Dispute {
   _id: string;
-  appraisalRecordId: {
-    assignmentId: {
-      employeeProfileId: {
-        firstName: string;
-        lastName: string;
-      };
+  appraisalId?: {
+    _id: string;
+    employeeProfileId?: {
+      firstName: string;
+      lastName: string;
     };
+  };
+  assignmentId?: {
+    _id: string;
+    employeeProfileId?: {
+      firstName: string;
+      lastName: string;
+    };
+  };
+  raisedByEmployeeId?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
   };
   reason: string;
   status: string;
   createdAt: string;
+  submittedAt?: string;
 }
 
 export default function DisputesPage() {
@@ -110,13 +122,20 @@ export default function DisputesPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredDisputes.map((dispute) => (
+              {filteredDisputes.map((dispute) => {
+                // Get employee name from various possible sources
+                const employee = 
+                  dispute.raisedByEmployeeId ||
+                  dispute.assignmentId?.employeeProfileId ||
+                  dispute.appraisalId?.employeeProfileId;
+                const employeeName = employee 
+                  ? `${employee.firstName || ''} ${employee.lastName || ''}`.trim() 
+                  : 'Unknown';
+                
+                return (
                 <tr key={dispute._id}>
-                  <td>
-                    {dispute.appraisalRecordId.assignmentId.employeeProfileId.firstName}{' '}
-                    {dispute.appraisalRecordId.assignmentId.employeeProfileId.lastName}
-                  </td>
-                  <td>{dispute.reason.substring(0, 60)}...</td>
+                  <td>{employeeName}</td>
+                  <td>{dispute.reason?.substring(0, 60) || 'No reason provided'}...</td>
                   <td>
                     <span className={`badge ${
                       dispute.status === 'APPROVED' ? 'badge-success' :
@@ -126,7 +145,7 @@ export default function DisputesPage() {
                       {dispute.status}
                     </span>
                   </td>
-                  <td>{new Date(dispute.createdAt).toLocaleDateString()}</td>
+                  <td>{new Date(dispute.submittedAt || dispute.createdAt).toLocaleDateString()}</td>
                   <td>
                     <Link
                       href={`/performance/disputes/${dispute._id}`}
@@ -140,7 +159,8 @@ export default function DisputesPage() {
                     </Link>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>

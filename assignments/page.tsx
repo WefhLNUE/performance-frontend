@@ -41,7 +41,14 @@ export default function AssignmentsPage() {
       const data = await api.get<Assignment[]>(`/performance/assignments/manager/${userId}`);
       setAssignments(data || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load assignments');
+      const msg = err?.message || '';
+      if (msg.includes('403')) {
+        setError('You are not authorized to view assignments. HR can grant access.');
+      } else if (msg.toLowerCase().includes('manager') || msg.toLowerCase().includes('not found')) {
+        setError('No manager assignments found for your account yet.');
+      } else {
+        setError(msg || 'Failed to load assignments');
+      }
     } finally {
       setLoading(false);
     }
@@ -77,12 +84,9 @@ export default function AssignmentsPage() {
             View and manage appraisal assignments
           </p>
         </div>
-        <button
-          className="btn-primary"
-          onClick={() => router.push('/performance/assignments/new')}
-        >
+        <Link href="/performance/assignments/new" className="btn-primary">
           + Create Assignments
-        </button>
+        </Link>
       </div>
 
       {error && (
@@ -96,12 +100,9 @@ export default function AssignmentsPage() {
           <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
             No assignments found.
           </p>
-          <button
-            className="btn-primary"
-            onClick={() => router.push('/performance/assignments/new')}
-          >
+          <Link href="/performance/assignments/new" className="btn-primary">
             Create Assignments
-          </button>
+          </Link>
         </div>
       ) : (
         <div className="card">
@@ -120,10 +121,10 @@ export default function AssignmentsPage() {
               {filteredAssignments.map((assignment) => (
                 <tr key={assignment._id}>
                   <td>
-                    {assignment.employeeProfileId.firstName} {assignment.employeeProfileId.lastName}
+                    {assignment.employeeProfileId?.firstName || ''} {assignment.employeeProfileId?.lastName || 'Unknown'}
                   </td>
-                  <td>{assignment.cycleId.name}</td>
-                  <td>{assignment.templateId.name}</td>
+                  <td>{assignment.cycleId?.name || 'N/A'}</td>
+                  <td>{assignment.templateId?.name || 'N/A'}</td>
                   <td>
                     <span className={`badge ${
                       assignment.status === 'SUBMITTED' ? 'badge-success' :

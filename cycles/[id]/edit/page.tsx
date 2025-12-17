@@ -68,10 +68,15 @@ export default function EditCyclePage() {
           ? data.employeeAcknowledgementDueDate.split('T')[0]
           : '',
         templateAssignments:
-          data.templateAssignments?.map((ta) => ({
-            templateId: typeof ta.templateId === 'object' ? ta.templateId._id : ta.templateId,
-            departmentIds: ta.departmentIds || [],
-          })) || [],
+          data.templateAssignments
+            ?.filter((ta) => ta && ta.templateId) // ignore entries with null templateId
+            .map((ta) => ({
+              templateId:
+                typeof ta.templateId === 'object' && ta.templateId !== null
+                  ? ta.templateId._id
+                  : (ta.templateId as any),
+              departmentIds: ta.departmentIds || [],
+            })) || [],
       });
     } catch (err: any) {
       setError(err.message || 'Failed to load cycle');

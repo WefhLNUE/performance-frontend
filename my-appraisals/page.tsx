@@ -7,14 +7,12 @@ import { getCurrentUserId } from '../../../lib/auth';
 
 interface AppraisalRecord {
   _id: string;
-  assignmentId: {
-    cycleId: { name: string };
-    templateId: { name: string };
-  };
-  totalScore: number;
-  overallRatingLabel: string;
+  cycleId?: { _id: string; name: string };
+  templateId?: { _id: string; name: string };
+  totalScore?: number;
+  overallRatingLabel?: string;
   status: string;
-  publishedAt?: string;
+  hrPublishedAt?: string;
 }
 
 export default function MyAppraisalsPage() {
@@ -34,10 +32,8 @@ export default function MyAppraisalsPage() {
         setError('User not authenticated');
         return;
       }
-      const data = await api.get<AppraisalRecord[]>(`/performance/records/employee/${userId}`);
-      // Filter for published appraisals
-      const published = (data || []).filter((a) => a.status === 'PUBLISHED');
-      setAppraisals(published);
+      const data = await api.get<AppraisalRecord[]>(`/performance/records/employee/${userId}/published`);
+      setAppraisals(data || []);
     } catch (err: any) {
       setError(err.message || 'Failed to load appraisals');
     } finally {
@@ -99,19 +95,19 @@ export default function MyAppraisalsPage() {
             <tbody>
               {appraisals.map((appraisal) => (
                 <tr key={appraisal._id}>
-                  <td>{appraisal.assignmentId.cycleId.name}</td>
-                  <td>{appraisal.assignmentId.templateId.name}</td>
+                  <td>{appraisal.cycleId?.name || 'N/A'}</td>
+                  <td>{appraisal.templateId?.name || 'N/A'}</td>
                   <td>
                     <span style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--performance)' }}>
-                      {appraisal.totalScore.toFixed(1)}
+                      {appraisal.totalScore?.toFixed(1) || 'N/A'}
                     </span>
                   </td>
                   <td>
-                    <span className="badge badge-info">{appraisal.overallRatingLabel}</span>
+                    <span className="badge badge-info">{appraisal.overallRatingLabel || 'N/A'}</span>
                   </td>
                   <td>
-                    {appraisal.publishedAt
-                      ? new Date(appraisal.publishedAt).toLocaleDateString()
+                    {appraisal.hrPublishedAt
+                      ? new Date(appraisal.hrPublishedAt).toLocaleDateString()
                       : '-'}
                   </td>
                   <td>

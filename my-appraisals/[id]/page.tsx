@@ -48,8 +48,9 @@ export default function AppraisalDetailPage() {
   };
 
   const canFileDispute = () => {
-    if (!record?.publishedAt) return false;
-    const publishedDate = new Date(record.publishedAt);
+    const publishDate = record?.hrPublishedAt || record?.publishedAt;
+    if (!publishDate) return false;
+    const publishedDate = new Date(publishDate);
     const now = new Date();
     const daysDiff = (now.getTime() - publishedDate.getTime()) / (1000 * 60 * 60 * 24);
     return daysDiff <= 7 && !record.acknowledgedAt;
@@ -157,7 +158,7 @@ export default function AppraisalDetailPage() {
         </div>
       )}
 
-      {record.strengths && record.strengths.length > 0 && (
+      {record.strengths && Array.isArray(record.strengths) && record.strengths.length > 0 && (
         <div className="card" style={{ marginBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>Strengths</h2>
           <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem' }}>
@@ -170,7 +171,7 @@ export default function AppraisalDetailPage() {
         </div>
       )}
 
-      {record.improvementAreas && record.improvementAreas.length > 0 && (
+      {record.improvementAreas && Array.isArray(record.improvementAreas) && record.improvementAreas.length > 0 && (
         <div className="card" style={{ marginBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>Areas for Improvement</h2>
           <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem' }}>
