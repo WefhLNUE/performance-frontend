@@ -9,6 +9,7 @@ import { getCurrentUserId } from '@/lib/auth';
 interface Assignment {
   _id: string;
   cycleId: {
+    _id?: string;
     name: string;
   };
   templateId: {
