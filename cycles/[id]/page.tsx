@@ -148,23 +148,40 @@ export default function CycleDetailPage() {
             Template Assignments
           </h2>
           <div style={{ display: 'grid', gap: '0.75rem' }}>
-            {cycle.templateAssignments.map((assignment, index) => (
-              <div
-                key={index}
-                style={{
-                  padding: '1rem',
-                  border: '1px solid var(--border-light)',
-                  borderRadius: '0.5rem',
-                }}
-              >
-                <div style={{ fontWeight: 500 }}>{assignment.templateId.name}</div>
-                {assignment.departmentIds && assignment.departmentIds.length > 0 && (
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>
-                    {assignment.departmentIds.length} department(s)
-                  </div>
-                )}
-              </div>
-            ))}
+            {cycle.templateAssignments.map((assignment: any, index: number) => {
+              const templateName =
+                assignment?.templateId && typeof assignment.templateId === 'object'
+                  ? assignment.templateId.name
+                  : 'No template assigned';
+
+              const departmentCount = Array.isArray(assignment?.departmentIds)
+                ? assignment.departmentIds.length
+                : 0;
+
+              return (
+                <div
+                  key={index}
+                  style={{
+                    padding: '1rem',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: '0.5rem',
+                  }}
+                >
+                  <div style={{ fontWeight: 500 }}>{templateName}</div>
+                  {departmentCount > 0 && (
+                    <div
+                      style={{
+                        fontSize: '0.875rem',
+                        color: 'var(--text-tertiary)',
+                        marginTop: '0.25rem',
+                      }}
+                    >
+                      {departmentCount} department(s)
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

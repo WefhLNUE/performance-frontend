@@ -89,8 +89,8 @@ export default function NewAssignmentPage() {
     setLoading(true);
 
     try {
-      await api.post('/performance/assignments', {
-        cycleId: formData.cycleId,
+      // Backend expects: POST /performance/cycles/:cycleId/assignments
+      await api.post(`/performance/cycles/${formData.cycleId}/assignments`, {
         templateId: formData.templateId,
         employeeIds: employeeIdsToUse,
       });
