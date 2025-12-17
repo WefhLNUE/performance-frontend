@@ -29,6 +29,7 @@ interface Dispute {
   };
   reason: string;
   details?: string;
+  // Backend uses AppraisalDisputeStatus: OPEN, UNDER_REVIEW, ADJUSTED, REJECTED
   status: string;
   resolutionSummary?: string;
   adjustedScore?: number;
@@ -185,17 +186,23 @@ export default function DisputeDetailPage() {
           </div>
         )}
         <div style={{ marginTop: '1rem' }}>
-          <span className={`badge ${
-            dispute.status === 'APPROVED' ? 'badge-success' :
-            dispute.status === 'REJECTED' ? 'badge-error' :
-            'badge-warning'
-          }`}>
+          <span
+            className={`badge ${
+              dispute.status === 'ADJUSTED'
+                ? 'badge-success'
+                : dispute.status === 'REJECTED'
+                ? 'badge-error'
+                : dispute.status === 'OPEN' || dispute.status === 'UNDER_REVIEW'
+                ? 'badge-warning'
+                : 'badge-info'
+            }`}
+          >
             {dispute.status}
           </span>
         </div>
       </div>
 
-      {(dispute.status === 'PENDING' || dispute.status === 'OPEN') && (
+      {(dispute.status === 'OPEN' || dispute.status === 'UNDER_REVIEW') && (
         <div className="card">
           <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>Resolution</h2>
           
@@ -267,7 +274,7 @@ export default function DisputeDetailPage() {
         </div>
       )}
 
-      {dispute.status !== 'PENDING' && dispute.status !== 'OPEN' && dispute.resolutionSummary && (
+      {dispute.status !== 'OPEN' && dispute.status !== 'UNDER_REVIEW' && dispute.resolutionSummary && (
         <div className="card">
           <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>Resolution</h2>
           <p style={{ color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>

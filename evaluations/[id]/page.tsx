@@ -68,14 +68,29 @@ export default function EvaluationFormPage() {
         const mappedRecord: AppraisalRecord = {
           _id: existing._id,
           ratings: (existing.ratings || []).map((r: any) => ({
-            criterionKey: r.criterionKey,
-            score: r.score,
-            comments: r.comment || '',
+            // Backend stores ratings as { key, ratingValue, comments }
+            // but we also support legacy shapes (criterionKey/score/comment)
+            criterionKey: r.criterionKey || r.key,
+            score:
+              r.score !== undefined
+                ? r.score
+                : r.ratingValue !== undefined
+                ? r.ratingValue
+                : 0,
+            comments: r.comment || r.comments || '',
           })),
           managerSummary: existing.managerSummary || existing.overallComment || '',
-          strengths: existing.strengths ? String(existing.strengths).split('\n') : [],
+          strengths: existing.strengths
+            ? String(existing.strengths)
+                .split('\n')
+                .map((s: string) => s.trim())
+                .filter((s: string) => s.length > 0)
+            : [],
           improvementAreas: existing.improvementAreas
-            ? String(existing.improvementAreas).split('\n')
+            ? String(existing.improvementAreas)
+                .split('\n')
+                .map((s: string) => s.trim())
+                .filter((s: string) => s.length > 0)
             : [],
           status: existing.status,
         };

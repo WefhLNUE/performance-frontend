@@ -5,21 +5,53 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 
+interface RatingApi {
+  key?: string;
+  criterionKey?: string;
+  ratingValue?: number;
+  score?: number;
+  comments?: string;
+  comment?: string;
+}
+
+interface AppraisalRecordApi {
+  _id: string;
+  assignmentId: {
+    cycleId: { name: string };
+    templateId: { name: string };
+  };
+  ratings?: RatingApi[];
+  totalScore: number;
+  overallRatingLabel: string;
+  managerSummary?: string;
+  strengths?: string;
+  improvementAreas?: string;
+  status: string;
+  hrPublishedAt?: string;
+  employeeAcknowledgedAt?: string;
+}
+
+interface RatingDisplay {
+  criterionKey: string;
+  score: number;
+  comments?: string;
+}
+
 interface AppraisalRecord {
   _id: string;
   assignmentId: {
     cycleId: { name: string };
     templateId: { name: string };
   };
-  ratings: Array<{ criterionKey: string; score: number; comments?: string }>;
+  ratings: RatingDisplay[];
   totalScore: number;
   overallRatingLabel: string;
   managerSummary?: string;
   strengths?: string[];
   improvementAreas?: string[];
   status: string;
-  publishedAt?: string;
-  acknowledgedAt?: string;
+  hrPublishedAt?: string;
+  employeeAcknowledgedAt?: string;
 }
 
 export default function AppraisalDetailPage() {
@@ -38,22 +70,54 @@ export default function AppraisalDetailPage() {
   const loadRecord = async () => {
     try {
       setLoading(true);
-      const data = await api.get<AppraisalRecord>(`/performance/records/${recordId}/view`);
-      setRecord(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load appraisal');
+      const data = await api.get<AppraisalRecordApi>(`/performance/records/${recordId}/view`);
+
+      const mapped: AppraisalRecord = {
+        ...data,
+        ratings: (data.ratings || []).map((r: RatingApi) => ({
+          criterionKey: r.criterionKey || r.key,
+          score:
+            r.score !== undefined
+              ? r.score
+              : r.ratingValue !== undefined
+              ? r.ratingValue
+              : 0,
+          comments: r.comments || r.comment || '',
+        })),
+        strengths: data.strengths
+          ? String(data.strengths)
+              .split('\n')
+              .map((s: string) => s.trim())
+              .filter((s: string) => s.length > 0)
+          : [],
+        improvementAreas: data.improvementAreas
+          ? String(data.improvementAreas)
+              .split('\n')
+              .map((s: string) => s.trim())
+              .filter((s: string) => s.length > 0)
+          : [],
+        hrPublishedAt: data.hrPublishedAt,
+        employeeAcknowledgedAt: data.employeeAcknowledgedAt,
+      };
+
+      setRecord(mapped);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to load appraisal');
+      } else {
+        setError('Failed to load appraisal');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const canFileDispute = () => {
-    const publishDate = record?.hrPublishedAt || record?.publishedAt;
-    if (!publishDate) return false;
-    const publishedDate = new Date(publishDate);
+    if (!record?.hrPublishedAt) return false;
+    const publishedDate = new Date(record.hrPublishedAt);
     const now = new Date();
     const daysDiff = (now.getTime() - publishedDate.getTime()) / (1000 * 60 * 60 * 24);
-    return daysDiff <= 7 && !record.acknowledgedAt;
+    return daysDiff <= 7 && !record.employeeAcknowledgedAt;
   };
 
   if (loading) {
@@ -185,7 +249,7 @@ export default function AppraisalDetailPage() {
       )}
 
       <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-        {!record.acknowledgedAt && (
+        {!record.employeeAcknowledgedAt && (
           <Link
             href={`/performance/my-appraisals/${recordId}/acknowledge`}
             className="btn-primary"
@@ -203,7 +267,7 @@ export default function AppraisalDetailPage() {
             File a Dispute
           </Link>
         )}
-        {record.acknowledgedAt && (
+        {record.employeeAcknowledgedAt && (
           <span className="badge badge-success">Acknowledged</span>
         )}
       </div>

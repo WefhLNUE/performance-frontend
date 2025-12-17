@@ -26,6 +26,7 @@ interface Dispute {
     lastName: string;
   };
   reason: string;
+  // Backend uses AppraisalDisputeStatus: OPEN, UNDER_REVIEW, ADJUSTED, REJECTED
   status: string;
   createdAt: string;
   submittedAt?: string;
@@ -97,8 +98,9 @@ export default function DisputesPage() {
           onChange={(e) => setStatusFilter(e.target.value)}
         >
           <option value="">All Statuses</option>
-          <option value="PENDING">Pending</option>
-          <option value="APPROVED">Approved</option>
+          <option value="OPEN">Open</option>
+          <option value="UNDER_REVIEW">Under Review</option>
+          <option value="ADJUSTED">Adjusted</option>
           <option value="REJECTED">Rejected</option>
         </select>
       </div>
@@ -137,11 +139,17 @@ export default function DisputesPage() {
                   <td>{employeeName}</td>
                   <td>{dispute.reason?.substring(0, 60) || 'No reason provided'}...</td>
                   <td>
-                    <span className={`badge ${
-                      dispute.status === 'APPROVED' ? 'badge-success' :
-                      dispute.status === 'REJECTED' ? 'badge-error' :
-                      'badge-warning'
-                    }`}>
+                    <span
+                      className={`badge ${
+                        dispute.status === 'ADJUSTED'
+                          ? 'badge-success'
+                          : dispute.status === 'REJECTED'
+                          ? 'badge-error'
+                          : dispute.status === 'OPEN' || dispute.status === 'UNDER_REVIEW'
+                          ? 'badge-warning'
+                          : 'badge-info'
+                      }`}
+                    >
                       {dispute.status}
                     </span>
                   </td>
