@@ -29,12 +29,28 @@ export default function CyclesPage() {
   const loadCycles = async () => {
     try {
       setLoading(true);
+      setError(''); // Clear previous errors
       const data = await api.get<Cycle[]>('/performance/cycles');
       setCycles(data || []);
     } catch (err: any) {
       setError(err.message || 'Failed to load cycles');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (cycleId: string, cycleName: string) => {
+    if (!confirm(`Are you sure you want to delete the cycle "${cycleName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/performance/cycles/${cycleId}`);
+      // Reload cycles after deletion
+      loadCycles();
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to delete cycle';
+      alert(msg);
     }
   };
 
@@ -125,7 +141,7 @@ export default function CyclesPage() {
                       : '-'}
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                       <Link
                         href={`/performance/cycles/${cycle._id}`}
                         style={{
@@ -146,6 +162,20 @@ export default function CyclesPage() {
                       >
                         Edit
                       </Link>
+                      <button
+                        onClick={() => handleDelete(cycle._id, cycle.name)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--error)',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          padding: 0,
+                        }}
+                        title="Delete cycle"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>

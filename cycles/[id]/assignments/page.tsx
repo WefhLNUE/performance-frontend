@@ -35,22 +35,38 @@ export default function CycleAssignmentsPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const loadAssignments = async () => {
-      try {
-        setLoading(true);
-        const data = await api.get<Assignment[]>(
-          `/performance/cycles/${cycleId}/assignments`,
-        );
-        setAssignments(data || []);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load assignments for this cycle');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadAssignments();
   }, [cycleId]);
+
+  const loadAssignments = async () => {
+    try {
+      setLoading(true);
+      setError(''); // Clear previous errors
+      const data = await api.get<Assignment[]>(
+        `/performance/cycles/${cycleId}/assignments`,
+      );
+      setAssignments(data || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load assignments for this cycle');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (assignmentId: string) => {
+    if (!confirm('Are you sure you want to delete this assignment? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/performance/assignments/${assignmentId}`);
+      // Reload assignments after deletion
+      loadAssignments();
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to delete assignment';
+      alert(msg);
+    }
+  };
 
   if (loading) {
     return (
@@ -88,9 +104,16 @@ export default function CycleAssignmentsPage() {
 
       {assignments.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
             No assignments have been created for this cycle yet.
           </p>
+          <a
+            href={`/performance/assignments/new?cycle=${cycleId}`}
+            className="btn-primary"
+            style={{ textDecoration: 'none', display: 'inline-block' }}
+          >
+            Create Assignments for This Cycle
+          </a>
         </div>
       ) : (
         <div className="card">
@@ -105,6 +128,7 @@ export default function CycleAssignmentsPage() {
                 <th>Status</th>
                 <th>Assigned</th>
                 <th>Due Date</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -140,6 +164,22 @@ export default function CycleAssignmentsPage() {
                     {a.dueDate
                       ? new Date(a.dueDate).toLocaleDateString()
                       : '-'}
+                  </td>
+                  <td>
+                    <button
+                      onClick={() => handleDelete(a._id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--error)',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        padding: 0,
+                      }}
+                      title="Delete assignment"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}
