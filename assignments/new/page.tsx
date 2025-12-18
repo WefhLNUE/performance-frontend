@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../../../../lib/api';
 
 interface Cycle {
@@ -22,13 +22,15 @@ interface Employee {
 
 export default function NewAssignmentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const cycleIdFromQuery = searchParams.get('cycle');
   const [loading, setLoading] = useState(false);
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
-    cycleId: '',
+    cycleId: cycleIdFromQuery || '',
     templateId: '',
     employeeIds: [] as string[],
     employeeIdsJson: '',

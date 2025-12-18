@@ -28,6 +28,12 @@ interface Template {
   templateType: string;
 }
 
+interface Department {
+  _id: string;
+  name: string;
+  code: string;
+}
+
 export default function EditCyclePage() {
   const params = useParams();
   const router = useRouter();
@@ -36,6 +42,7 @@ export default function EditCyclePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
@@ -50,8 +57,33 @@ export default function EditCyclePage() {
 
   useEffect(() => {
     loadCycle();
-    loadTemplates();
+    loadData();
   }, [cycleId]);
+
+  const loadData = async () => {
+    try {
+      const [templatesData, departmentsData] = await Promise.all([
+        api.get<Template[]>('/performance/templates?activeOnly=true').catch((err) => {
+          console.error('Failed to load templates:', err);
+          return [];
+        }),
+        api.get<Department[]>('/organization-structure/departments').catch((err) => {
+          console.error('Failed to load departments:', err);
+          if (err.message) {
+            setError(`Failed to load departments: ${err.message}. Please ensure the backend is running and you have the required permissions.`);
+          }
+          return [];
+        }),
+      ]);
+      setTemplates(templatesData || []);
+      setDepartments(departmentsData || []);
+      if (departmentsData.length === 0) {
+        console.warn('No departments found. Make sure departments exist in the database.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load data');
+    }
+  };
 
   const loadCycle = async () => {
     try {
@@ -85,14 +117,6 @@ export default function EditCyclePage() {
     }
   };
 
-  const loadTemplates = async () => {
-    try {
-      const data = await api.get<Template[]>('/performance/templates?activeOnly=true');
-      setTemplates(data || []);
-    } catch (err: any) {
-      console.error('Failed to load templates:', err);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,6 +150,11 @@ export default function EditCyclePage() {
     const updated = [...formData.templateAssignments];
     updated[index] = { ...updated[index], [field]: value };
     setFormData({ ...formData, templateAssignments: updated });
+  };
+
+  const handleDepartmentChange = (index: number, selectedOptions: HTMLSelectElement['selectedOptions']) => {
+    const selectedIds = Array.from(selectedOptions).map(option => option.value);
+    updateTemplateAssignment(index, 'departmentIds', selectedIds);
   };
 
   const removeTemplateAssignment = (index: number) => {
@@ -280,6 +309,25 @@ export default function EditCyclePage() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label className="form-label">Departments (Optional)</label>
+                <select
+                  className="form-input"
+                  multiple
+                  value={assignment.departmentIds || []}
+                  onChange={(e) => handleDepartmentChange(index, e.target.selectedOptions)}
+                  style={{ minHeight: '100px' }}
+                >
+                  {departments.map((dept) => (
+                    <option key={dept._id} value={dept._id}>
+                      {dept.name} ({dept.code})
+                    </option>
+                  ))}
+                </select>
+                <small style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
+                  Hold Ctrl (Windows) or Cmd (Mac) to select multiple departments. Leave empty to assign to all departments.
+                </small>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
                 <button

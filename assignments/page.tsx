@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { getCurrentUserId } from '@/lib/auth';
 
@@ -26,21 +26,35 @@ interface Assignment {
 
 export default function AssignmentsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const cycleId = searchParams.get('cycle');
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedCycle, setSelectedCycle] = useState('');
 
   useEffect(() => {
     loadAssignments();
-  }, []);
+  }, [cycleId]);
 
   const loadAssignments = async () => {
     try {
       setLoading(true);
-      const userId = getCurrentUserId();
-      const data = await api.get<Assignment[]>(`/performance/assignments/manager/${userId}`);
-      setAssignments(data || []);
+      setError(''); // Clear previous errors
+      
+      // If cycleId is provided, load assignments for that cycle (HR view)
+      if (cycleId) {
+        const data = await api.get<Assignment[]>(`/performance/cycles/${cycleId}/assignments`);
+        setAssignments(data || []);
+      } else {
+        // Otherwise, load manager assignments for the current user
+        const userId = getCurrentUserId();
+        if (!userId) {
+          setError('User not authenticated. Please log in again.');
+          return;
+        }
+        const data = await api.get<Assignment[]>(`/performance/assignments/manager/${userId}`);
+        setAssignments(data || []);
+      }
     } catch (err: any) {
       const msg = err?.message || '';
       if (msg.includes('403')) {
@@ -55,9 +69,22 @@ export default function AssignmentsPage() {
     }
   };
 
-  const filteredAssignments = selectedCycle
-    ? assignments.filter((a) => a.cycleId._id === selectedCycle)
-    : assignments;
+  const handleDelete = async (assignmentId: string) => {
+    if (!confirm('Are you sure you want to delete this assignment? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/performance/assignments/${assignmentId}`);
+      // Reload assignments after deletion
+      loadAssignments();
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to delete assignment';
+      alert(msg);
+    }
+  };
+
+  // No need for filtering if we already loaded by cycle
 
   if (loading) {
     return (
@@ -119,7 +146,7 @@ export default function AssignmentsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredAssignments.map((assignment) => (
+              {assignments.map((assignment) => (
                 <tr key={assignment._id}>
                   <td>
                     {assignment.employeeProfileId?.firstName || ''} {assignment.employeeProfileId?.lastName || 'Unknown'}
@@ -137,16 +164,32 @@ export default function AssignmentsPage() {
                   </td>
                   <td>{new Date(assignment.createdAt).toLocaleDateString()}</td>
                   <td>
-                    <Link
-                      href={`/performance/evaluations/${assignment._id}`}
-                      style={{
-                        color: 'var(--primary-600)',
-                        textDecoration: 'none',
-                        fontSize: '0.875rem',
-                      }}
-                    >
-                      View
-                    </Link>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                      <Link
+                        href={`/performance/evaluations/${assignment._id}`}
+                        style={{
+                          color: 'var(--primary-600)',
+                          textDecoration: 'none',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        View
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(assignment._id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--error)',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          padding: 0,
+                        }}
+                        title="Delete assignment"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

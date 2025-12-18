@@ -10,10 +10,17 @@ interface Template {
   templateType: string;
 }
 
+interface Department {
+  _id: string;
+  name: string;
+  code: string;
+}
+
 export default function NewCyclePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
@@ -27,15 +34,40 @@ export default function NewCyclePage() {
   });
 
   useEffect(() => {
-    loadTemplates();
+    loadData();
   }, []);
 
-  const loadTemplates = async () => {
+  const loadData = async () => {
     try {
-      const data = await api.get<Template[]>('/performance/templates?activeOnly=true');
-      setTemplates(data || []);
+      console.log('Loading templates and departments...');
+      const [templatesData, departmentsData] = await Promise.all([
+        api.get<Template[]>('/performance/templates?activeOnly=true').catch((err) => {
+          console.error('Failed to load templates:', err);
+          return [];
+        }),
+        api.get<Department[]>('/organization-structure/departments').catch((err) => {
+          console.error('Failed to load departments:', err);
+          console.error('Department error details:', {
+            message: err.message,
+            status: err.status,
+            response: err.response,
+          });
+          if (err.message) {
+            setError(`Failed to load departments: ${err.message}. Please ensure the backend is running and you have the required permissions.`);
+          }
+          return [];
+        }),
+      ]);
+      console.log('Templates loaded:', templatesData?.length || 0);
+      console.log('Departments loaded:', departmentsData?.length || 0, departmentsData);
+      setTemplates(templatesData || []);
+      setDepartments(departmentsData || []);
+      if (!departmentsData || departmentsData.length === 0) {
+        console.warn('⚠️ No departments found. Make sure departments exist in the database and the endpoint is accessible.');
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to load templates');
+      console.error('Error in loadData:', err);
+      setError(err.message || 'Failed to load data');
     }
   };
 
@@ -71,6 +103,11 @@ export default function NewCyclePage() {
     const updated = [...formData.templateAssignments];
     updated[index] = { ...updated[index], [field]: value };
     setFormData({ ...formData, templateAssignments: updated });
+  };
+
+  const handleDepartmentChange = (index: number, selectedOptions: HTMLSelectElement['selectedOptions']) => {
+    const selectedIds = Array.from(selectedOptions).map(option => option.value);
+    updateTemplateAssignment(index, 'departmentIds', selectedIds);
   };
 
   const removeTemplateAssignment = (index: number) => {
@@ -217,6 +254,35 @@ export default function NewCyclePage() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label className="form-label">Departments (Optional)</label>
+                {departments.length === 0 ? (
+                  <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-secondary)', borderRadius: '0.25rem', border: '1px solid var(--border-light)' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0 }}>
+                      No departments available. {error ? `Error: ${error}` : 'Please create departments in the Organization Structure module first.'}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      className="form-input"
+                      multiple
+                      value={assignment.departmentIds || []}
+                      onChange={(e) => handleDepartmentChange(index, e.target.selectedOptions)}
+                      style={{ minHeight: '100px' }}
+                    >
+                      {departments.map((dept) => (
+                        <option key={dept._id} value={dept._id}>
+                          {dept.name} ({dept.code})
+                        </option>
+                      ))}
+                    </select>
+                    <small style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
+                      Hold Ctrl (Windows) or Cmd (Mac) to select multiple departments. Leave empty to assign to all departments.
+                    </small>
+                  </>
+                )}
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
                 <button
