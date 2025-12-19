@@ -156,11 +156,14 @@ export default function EvaluationFormPage() {
     }
 
     setError('');
+    setSuccess('');
     setSaving(true);
     try {
       if (record?._id) {
         // Existing record: just submit it
         await api.post(`/performance/records/${record._id}/submit`);
+        // existing record:  submit
+        await loadData();
       } else {
         // No record yet: create a submitted record in one step
         const payload = {
@@ -175,12 +178,16 @@ export default function EvaluationFormPage() {
           status: 'MANAGER_SUBMITTED',
         };
         await api.post(`/performance/assignments/${assignmentId}/records`, payload);
+        // reload data to get the new record
+        await loadData();
       }
       setSuccess('Evaluation submitted successfully');
+      setSaving(false);
+      // Redirect back to evaluations list after a short delay
       setTimeout(() => router.push('/performance/evaluations'), 2000);
     } catch (err: any) {
       setError(err.message || 'Failed to submit evaluation');
-    } finally {
+   
       setSaving(false);
     }
   };
