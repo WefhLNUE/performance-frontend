@@ -46,21 +46,57 @@ export default function AssignmentsPage() {
         const data = await api.get<Assignment[]>(`/performance/cycles/${cycleId}/assignments`);
         setAssignments(data || []);
       } else {
-        // Otherwise, load manager assignments for the current user
+        // Otherwise, load manager assignments and employee assignments for the current user
         const userId = getCurrentUserId();
         if (!userId) {
           setError('User not authenticated. Please log in again.');
           return;
         }
-        const data = await api.get<Assignment[]>(`/performance/assignments/manager/${userId}`);
-        setAssignments(data || []);
-      }
-    } catch (err: any) {
+        // Try to load both manager and employee assignments
+        const [managerAssignments, employeeAssignments] = await Promise.allSettled([
+          api.get<Assignment[]>(`/performance/assignments/manager/${userId}`),
+          api.get<Assignment[]>(`/performance/assignments/employee/${userId}`),
+        ]);
+        
+        const allAssignments: Assignment[] = [];
+        
+        // Add manager assignments if successful
+        if (managerAssignments.status === 'fulfilled') {
+          allAssignments.push(...(managerAssignments.value || []));
+        }
+        
+        // Add employee assignments if successful
+        if (employeeAssignments.status === 'fulfilled') {
+          allAssignments.push(...(employeeAssignments.value || []));
+        }
+        
+        // Remove duplicates based on _id
+        const uniqueAssignments = allAssignments.filter((assignment, index, self) =>
+          index === self.findIndex((a) => a._id === assignment._id)
+        );
+        
+        setAssignments(uniqueAssignments);
+        
+        // Show error only if both requests failed
+        if (managerAssignments.status === 'rejected' && employeeAssignments.status === 'rejected') {
+          const managerError = managerAssignments.reason?.message || '';
+          const employeeError = employeeAssignments.reason?.message || '';
+          
+          if (managerError.includes('403') || employeeError.includes('403')) {
+            setError('You are not authorized to view assignments. HR can grant access.');
+          } else if (managerError.toLowerCase().includes('not found') && employeeError.toLowerCase().includes('not found')) {
+            setError('No assignments found for your account yet.');
+          } else {
+            setError('Failed to load assignments. Please try again.');
+          }
+        }
+    }  
+      } catch (err: any) {
       const msg = err?.message || '';
       if (msg.includes('403')) {
         setError('You are not authorized to view assignments. HR can grant access.');
       } else if (msg.toLowerCase().includes('manager') || msg.toLowerCase().includes('not found')) {
-        setError('No manager assignments found for your account yet.');
+        setError('No assignments found for your account yet.');
       } else {
         setError(msg || 'Failed to load assignments');
       }
