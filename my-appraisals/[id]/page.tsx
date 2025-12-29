@@ -174,7 +174,7 @@ export default function AppraisalDetailPage() {
           <h2 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Overall Performance</h2>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '2rem', fontWeight: 600, color: 'var(--performance)' }}>
-              {record.totalScore.toFixed(1)}
+              {record.totalScore?.toFixed(1) || 'N/A'}
             </div>
             <div>
               <span className="badge badge-info" style={{ fontSize: '1rem' }}>

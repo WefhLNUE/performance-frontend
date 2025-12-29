@@ -180,7 +180,7 @@ export default function PublishAppraisalsPage() {
                   <td>{record.assignmentId.cycleId.name}</td>
                   <td>
                     <span style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--performance)' }}>
-                      {record.totalScore.toFixed(1)}
+                      {record.totalScore?.toFixed(1) || 'N/A'}
                     </span>
                   </td>
                   <td>

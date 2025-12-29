@@ -283,7 +283,7 @@ export default function DisputeDetailPage() {
           {dispute.adjustedScore && (
             <div style={{ marginTop: '1rem' }}>
               <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                Adjusted Score: {dispute.adjustedScore.toFixed(1)} ({dispute.adjustedRatingLabel})
+                Adjusted Score: {dispute.adjustedScore?.toFixed(1)} ({dispute.adjustedRatingLabel})
               </div>
             </div>
           )}
