@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../../../../lib/api';
+import { API_URL } from '@/lib/config';
 
 interface Cycle {
   _id: string;
@@ -20,7 +21,7 @@ interface Employee {
   lastName: string;
 }
 
-export default function NewAssignmentPage() {
+function NewAssignmentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const cycleIdFromQuery = searchParams.get('cycle');
@@ -51,7 +52,7 @@ export default function NewAssignmentPage() {
       
       // Try to load employees from employee-profile endpoint
       try {
-        const employeesData = await api.get<Employee[]>('http://localhost:5000/employee-profile').catch(() => []);
+        const employeesData = await api.get<Employee[]>(`${API_URL}/employee-profile`).catch(() => []);
         setEmployees(employeesData || []);
       } catch {
         // If employee-profile endpoint doesn't exist or fails, that's okay
@@ -234,3 +235,12 @@ export default function NewAssignmentPage() {
   );
 }
 
+
+// Wrapper component with Suspense boundary
+export default function NewAssignmentPage() {
+    return (
+        <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>Loading...</div>}>
+            <NewAssignmentPageContent />
+        </Suspense>
+    );
+}

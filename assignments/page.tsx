@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -24,7 +24,7 @@ interface Assignment {
   createdAt: string;
 }
 
-export default function AssignmentsPage() {
+function AssignmentsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const cycleId = searchParams.get('cycle');
@@ -237,3 +237,12 @@ export default function AssignmentsPage() {
   );
 }
 
+
+// Wrapper component with Suspense boundary
+export default function AssignmentsPage() {
+    return (
+        <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>Loading...</div>}>
+            <AssignmentsPageContent />
+        </Suspense>
+    );
+}
