@@ -66,7 +66,11 @@ export default function EditTemplatePage() {
         name: data.name,
         description: data.description || '',
         templateType: data.templateType,
-        ratingScale: data.ratingScale,
+        ratingScale: {
+          ...data.ratingScale,
+          step: data.ratingScale.step ?? 1,
+          labels: data.ratingScale.labels ?? [],
+        },
         criteria: data.criteria || [],
         instructions: data.instructions || '',
         isActive: data.isActive,

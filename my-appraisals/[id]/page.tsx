@@ -75,7 +75,7 @@ export default function AppraisalDetailPage() {
       const mapped: AppraisalRecord = {
         ...data,
         ratings: (data.ratings || []).map((r: RatingApi) => ({
-          criterionKey: r.criterionKey || r.key,
+          criterionKey: r.criterionKey || r.key || '',
           score:
             r.score !== undefined
               ? r.score
