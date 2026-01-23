@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../../../../lib/api';
 
-export default function NewDisputePage() {
+function NewDisputePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const recordId = searchParams.get('recordId');
@@ -120,3 +120,12 @@ export default function NewDisputePage() {
   );
 }
 
+
+// Wrapper component with Suspense boundary
+export default function NewDisputePage() {
+    return (
+        <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>Loading...</div>}>
+            <NewDisputePageContent />
+        </Suspense>
+    );
+}
